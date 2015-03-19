@@ -10,7 +10,9 @@ class Solver(val graph: Graph) {
   val cp: ConstraintEngine = new ConstraintEngine(graph)
 
   def solveIt(): Unit = {
-    val feasible = cp.checkEdges
+    var feasible = cp.choice(0, 0)
+    feasible = cp.choice(1, 0)
+    feasible = cp.choice(1, 1)
     println(feasible)
   }
 
