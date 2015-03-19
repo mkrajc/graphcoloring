@@ -1,0 +1,24 @@
+apply plugin: 'scala'
+apply plugin: 'eclipse'
+apply plugin: 'application'
+
+group = 'org.mechsoul'
+version = '1.0.0-SNAPSHOT'
+
+mainClassName = "org.mechsoul.Solver"
+
+targetCompatibility=1.7
+sourceCompatibility=1.7
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'org.scala-lang:scala-library:2.11.4'
+
+    testCompile 'junit:junit:4.11'
+    testCompile 'org.scalatest:scalatest_2.11:2.2.2'
+    testCompile 'org.mockito:mockito-all:1.9.5'
+    
+}

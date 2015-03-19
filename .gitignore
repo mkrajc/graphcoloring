@@ -1,0 +1,11 @@
+/bin
+
+# gradle
+.gradle
+.cache
+
+# ide files
+.project
+.classpath
+.settings
+
