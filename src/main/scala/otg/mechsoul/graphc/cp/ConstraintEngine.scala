@@ -1,8 +1,8 @@
 package otg.mechsoul.graphc.cp
 
-import otg.mechsoul.graphc.graph.Graph
 import scala.collection.mutable.ListBuffer
-import otg.mechsoul.graphc.cp.Choice
+
+import otg.mechsoul.graphc.graph.Graph
 
 class ConstraintEngine(val graph: Graph) {
 
@@ -37,8 +37,8 @@ class ConstraintEngine(val graph: Graph) {
   def color(vertex: Int): Int = colors(vertex)
   def setColor(vertex: Int, color: Int) = colors(vertex) = color
 
-  def choice(vertex: Int, color: Int): Result = {
-    val setColor = new SetVertexColor(this, vertex, color)
+  def applyChoice(choice: Choice): Result = {
+    val setColor = new SetVertexColor(this, choice.vertex, choice.color)
     val success = setColor.execute()
     new Result(success, List(setColor))
   }
@@ -52,14 +52,15 @@ class ConstraintEngine(val graph: Graph) {
       Nil
     }
   }
+  def isSolved(): Boolean = false
 
 }
 
-class Choice(vertex: Int, color: Int){
+class Choice(val vertex: Int, val color: Int) {
   override def toString() = s"($vertex with $color)"
 }
 
-class Result(success: Boolean, instructions: List[Instruction]) {
+class Result(val success: Boolean, instructions: List[Instruction]) {
   def rollback() {
     instructions.foreach { i => i.rollback() }
   }
