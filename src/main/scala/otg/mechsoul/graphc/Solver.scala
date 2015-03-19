@@ -5,15 +5,22 @@ import otg.mechsoul.graphc.graph.Edge
 import scala.io.Source
 import otg.mechsoul.graphc.cp.ConstraintEngine
 import otg.mechsoul.graphc.cp.ConstraintEngine
+import otg.mechsoul.graphc.cp.Result
 
 class Solver(val graph: Graph) {
   val cp: ConstraintEngine = new ConstraintEngine(graph)
 
   def solveIt(): Unit = {
-    var feasible = cp.choice(0, 0)
-    feasible = cp.choice(1, 0)
-    feasible = cp.choice(1, 1)
-    println(feasible)
+    val res1 = cp.choice(0, 0)
+    println("===")
+    val res2 = cp.choice(2, 2)
+    println("===")
+    val res3 = cp.choice(3,3)
+    res3.rollback()
+    res2.rollback()
+    res1.rollback()
+    
+    println(cp.colors.mkString(","))
   }
 
 }

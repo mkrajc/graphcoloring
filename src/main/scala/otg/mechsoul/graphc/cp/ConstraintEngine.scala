@@ -6,9 +6,12 @@ import scala.collection.mutable.ListBuffer
 class ConstraintEngine(val graph: Graph) {
 
   val NO_COLOR = -1
+  val MAX_COLORS = 4
+  val LIMIT_COLOR = MAX_COLORS - 1
+  val COLORS = List(1, 2, 3, 4)
 
   val colors: Array[Int] = Array.fill(graph.nodeCount)(NO_COLOR)
-  val vertexDomains: Array[List[Int]] = (0 until graph.nodeCount).map(vertex => List(0, 1, 2, 3)).toArray
+  val vertexForbiddenDomains: Array[List[Int]] = Array.fill(graph.nodeCount)(Nil)
   val processedNodes: List[Int] = Nil
 
   def checkEdges(): Boolean = {
@@ -25,17 +28,27 @@ class ConstraintEngine(val graph: Graph) {
     color1 == NO_COLOR || color2 == NO_COLOR || color1 != color2
   }
 
-  def checkDomains(vertex: Int): Boolean = !vertexDomains(vertex).isEmpty
-  def checkDomains(): Boolean = (0 until graph.nodeCount).forall(checkDomains)
+  def checkDomain(vertex: Int): Boolean = vertexForbiddenDomains(vertex).size < MAX_COLORS
+  def checkDomain(vertex: Int, color: Int): Boolean = !vertexForbiddenDomains(vertex).contains(color)
+  def checkDomains(): Boolean = (0 until graph.nodeCount).forall(checkDomain)
+
+  def checkColor(vertex: Int): Boolean = color(vertex) == NO_COLOR
 
   def color(vertex: Int): Int = colors(vertex)
   def setColor(vertex: Int, color: Int) = colors(vertex) = color
 
-  def choice(vertex: Int, color: Int): Boolean = {
+  def choice(vertex: Int, color: Int): Result = {
     val setColor = new SetVertexColor(this, vertex, color)
-    setColor.execute()
+    val success = setColor.execute()
+    new Result(success, List(setColor))
   }
 
+}
+
+class Result(success: Boolean, instructions: List[Instruction]) {
+  def rollback() {
+    instructions.foreach { i => i.rollback() }
+  }
 }
 
 abstract class Instruction(val cp: ConstraintEngine) {
@@ -43,7 +56,6 @@ abstract class Instruction(val cp: ConstraintEngine) {
 
   def execute(): Boolean = {
     println("commit: " + this)
-    //executed.append(this)
     val feasible = doExecute()
 
     val con = feasible && consequences()
@@ -69,22 +81,25 @@ abstract class Instruction(val cp: ConstraintEngine) {
 class SetVertexColor(cp: ConstraintEngine, vertex: Int, color: Int) extends Instruction(cp) {
 
   val prevColor = cp.color(vertex)
-  val prevDomains = cp.vertexDomains(vertex)
+  val prevDomains = cp.vertexForbiddenDomains(vertex)
 
   override def doExecute(): Boolean = {
-    cp.setColor(vertex, color);
-    cp.vertexDomains(vertex) = Nil
-    cp.checkEdges(vertex);
+    if (cp.checkColor(vertex) && cp.checkDomain(vertex, color)) {
+      cp.setColor(vertex, color);
+      cp.vertexForbiddenDomains(vertex) = Nil
+      cp.checkEdges(vertex);
+    } else false
   }
 
   override def doRollback(): Unit = {
     cp.setColor(vertex, prevColor);
-    cp.vertexDomains(vertex) = prevDomains
+    cp.vertexForbiddenDomains(vertex) = prevDomains
   }
 
   override def consequences(): Boolean = {
-    cp.graph.incident(vertex).filter(v => cp.color(v) == cp.NO_COLOR).forall(incVertex => {
-      val removeDomain = new RemoveVertexDomain(cp, incVertex, color)
+    cp.graph.incident(vertex).filter(cp.checkColor).forall(incVertex => {
+      val removeDomain = new ForbidVertexDomain(cp, incVertex, color)
+      executed.append(removeDomain)
       removeDomain.execute()
     })
   }
@@ -92,30 +107,36 @@ class SetVertexColor(cp: ConstraintEngine, vertex: Int, color: Int) extends Inst
   override def toString = s"$vertex set color $color"
 }
 
-class RemoveVertexDomain(cp: ConstraintEngine, vertex: Int, color: Int) extends Instruction(cp) {
+class ForbidVertexDomain(cp: ConstraintEngine, vertex: Int, color: Int) extends Instruction(cp) {
 
   override def doExecute(): Boolean = {
-    cp.vertexDomains(vertex) = cp.vertexDomains(vertex).filterNot(_ == color)
-    !cp.vertexDomains(vertex).isEmpty
+    if (cp.checkColor(vertex)) {
+      cp.vertexForbiddenDomains(vertex) = color :: cp.vertexForbiddenDomains(vertex)
+      cp.checkDomain(vertex)
+    } else false
   }
 
   override def doRollback(): Unit = {
-    cp.vertexDomains(vertex) = color :: cp.vertexDomains(vertex)
+    cp.vertexForbiddenDomains(vertex) = cp.vertexForbiddenDomains(vertex).tail
   }
 
   override def consequences(): Boolean = {
     val vertexColor = cp.color(vertex)
-    val domains = cp.vertexDomains(vertex)
+    val domains = cp.vertexForbiddenDomains(vertex)
 
     if (vertexColor == cp.NO_COLOR) {
       domains.size match {
-        case 0 => false
-        case 1 => new SetVertexColor(cp, vertex, domains.head).execute()
-        case _ => true
+        case i if i < cp.LIMIT_COLOR => true
+        case cp.LIMIT_COLOR =>
+          val onlyAllowed = cp.COLORS.diff(domains).head
+          val setColor = new SetVertexColor(cp, vertex, onlyAllowed)
+          executed.append(setColor)
+          setColor.execute()
+        case _ => false
       }
     } else { true }
   }
 
-  override def toString = s"$vertex remove $color from domain ${cp.vertexDomains(vertex).mkString("(", ",", ")")}"
+  override def toString = s"$vertex forbid $color domain ${cp.vertexForbiddenDomains(vertex).mkString("(", ",", ")")}"
 
 }
