@@ -11,16 +11,7 @@ class Solver(val graph: Graph) {
   val cp: ConstraintEngine = new ConstraintEngine(graph)
 
   def solveIt(): Unit = {
-    val res1 = cp.choice(0, 0)
-    println("===")
-    val res2 = cp.choice(2, 2)
-    println("===")
-    val res3 = cp.choice(3,3)
-    res3.rollback()
-    res2.rollback()
-    res1.rollback()
-    
-    println(cp.colors.mkString(","))
+    println(cp.giveNextChoices().mkString(","))
   }
 
 }

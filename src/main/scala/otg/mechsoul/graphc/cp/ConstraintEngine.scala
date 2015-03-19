@@ -2,6 +2,7 @@ package otg.mechsoul.graphc.cp
 
 import otg.mechsoul.graphc.graph.Graph
 import scala.collection.mutable.ListBuffer
+import otg.mechsoul.graphc.cp.Choice
 
 class ConstraintEngine(val graph: Graph) {
 
@@ -12,7 +13,6 @@ class ConstraintEngine(val graph: Graph) {
 
   val colors: Array[Int] = Array.fill(graph.nodeCount)(NO_COLOR)
   val vertexForbiddenDomains: Array[List[Int]] = Array.fill(graph.nodeCount)(Nil)
-  val processedNodes: List[Int] = Nil
 
   def checkEdges(): Boolean = {
     graph.edges.forall(edge => {
@@ -43,6 +43,20 @@ class ConstraintEngine(val graph: Graph) {
     new Result(success, List(setColor))
   }
 
+  def giveNextChoices(): List[Choice] = {
+    if (colors.forall(_ == NO_COLOR)) {
+      // give highest degree node with one color
+      val maximalDeg = graph.deg.head
+      List(new Choice(maximalDeg._2, 0))
+    } else {
+      Nil
+    }
+  }
+
+}
+
+class Choice(vertex: Int, color: Int){
+  override def toString() = s"($vertex with $color)"
 }
 
 class Result(success: Boolean, instructions: List[Instruction]) {
