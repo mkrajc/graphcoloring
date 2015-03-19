@@ -3,11 +3,25 @@ package otg.mechsoul.graphc
 import otg.mechsoul.graphc.graph.Graph
 import otg.mechsoul.graphc.graph.Edge
 import scala.io.Source
+import otg.mechsoul.graphc.cp.ConstraintEngine
+import otg.mechsoul.graphc.cp.ConstraintEngine
+
+class Solver(val graph: Graph) {
+  val cp: ConstraintEngine = new ConstraintEngine(graph)
+
+  def solveIt(): Unit = {
+    val feasible = cp.checkEdges
+    println(feasible)
+  }
+
+}
 
 object Solver {
   def main(args: Array[String]) {
     val graph = parseInput(readInputFile(args))
     println(graph)
+    val solver = new Solver(graph)
+    solver.solveIt()
   }
 
   private def readInputFile(args: Array[String]): Iterator[String] = {
