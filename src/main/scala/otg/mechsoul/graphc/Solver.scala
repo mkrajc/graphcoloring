@@ -1,28 +1,65 @@
 package otg.mechsoul.graphc
 
-import otg.mechsoul.graphc.graph.Graph
-import otg.mechsoul.graphc.graph.Edge
+import scala.collection.mutable.Queue
 import scala.io.Source
-import otg.mechsoul.graphc.cp.ConstraintEngine
+
 import otg.mechsoul.graphc.cp.ConstraintEngine
 import otg.mechsoul.graphc.cp.Result
+import otg.mechsoul.graphc.graph.Edge
+import otg.mechsoul.graphc.graph.Graph
 
 class Solver(val graph: Graph) {
   val cp: ConstraintEngine = new ConstraintEngine(graph)
+  val queue = new Queue[Result]
 
   def solveIt(): Unit = {
-    while (!cp.isSolved()) {
-      for(choice <- cp.giveNextChoices()){
-        val result = cp.applyChoice(choice)
-        if(result.success){
-          //break and memo
-        } else {
-          // continue
-        }
+    var x = 0
+    while (x < 0) {
+      x = x + 1
+
+      val choices = cp.giveNextChoices()
+      val goodChoice = choices.toStream.map(ch => cp.applyChoice(ch)).find(_.success)
+
+      if (goodChoice.isDefined) {
+        queue += goodChoice.get
+      } else {
+        queue.dequeue.rollback
       }
     }
+
+    val t = Node(Choice(1, 0),
+      List(
+        Node(Choice(0, 0), Nil),
+        Node(Choice(0, 1),
+          List(
+            Node(Choice(2, 0), Nil),
+            Node(Choice(2, 1), Nil))),
+        Node(Choice(0, 2), Nil)))
+
+    Tree.fold[Int](t, 0, (i: Int, ch: Choice) => {
+      println(ch)
+      0
+    })
   }
 
+}
+
+case class Choice(val vertex: Int, val color: Int) {
+  override def toString() = s"($vertex with $color)"
+}
+
+sealed abstract class Tree
+case class Node(choice: Choice, children: List[Node]) extends Tree
+case object TNil extends Tree
+
+object Tree {
+  def fold[B](t: Tree, z: B, f: (B, Choice) => B): B = t match {
+    case Node(ch, children) => {
+      f(children.foldLeft(z)((b: B, child: Node) => fold(child, b, f)), ch)
+    }
+    case _ => z
+  }
+  
 }
 
 object Solver {

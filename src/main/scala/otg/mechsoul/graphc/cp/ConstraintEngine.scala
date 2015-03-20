@@ -1,8 +1,8 @@
 package otg.mechsoul.graphc.cp
 
 import scala.collection.mutable.ListBuffer
-
 import otg.mechsoul.graphc.graph.Graph
+import otg.mechsoul.graphc.Choice
 
 class ConstraintEngine(val graph: Graph) {
 
@@ -44,20 +44,19 @@ class ConstraintEngine(val graph: Graph) {
   }
 
   def giveNextChoices(): List[Choice] = {
-    if (colors.forall(_ == NO_COLOR)) {
+    val start = colors.forall(_ == NO_COLOR)
+    val result = if (start) {
       // give highest degree node with one color
       val maximalDeg = graph.deg.head
-      List(new Choice(maximalDeg._2, 0))
+      List(Choice(maximalDeg._2, 0))
     } else {
       Nil
     }
+    
+    result
   }
   def isSolved(): Boolean = false
 
-}
-
-class Choice(val vertex: Int, val color: Int) {
-  override def toString() = s"($vertex with $color)"
 }
 
 class Result(val success: Boolean, instructions: List[Instruction]) {
