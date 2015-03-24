@@ -5,7 +5,7 @@ apply plugin: 'application'
 group = 'org.mechsoul'
 version = '1.0.0-SNAPSHOT'
 
-mainClassName = "org.mechsoul.Solver"
+mainClassName = "otg.mechsoul.graphc.Solver"
 
 targetCompatibility=1.7
 sourceCompatibility=1.7

@@ -6,10 +6,7 @@ import otg.mechsoul.graphc.Choice
 
 class ConstraintEngine(val graph: Graph) {
 
-  val NO_COLOR = -1
-  val MAX_COLORS = 4
-  val LIMIT_COLOR = MAX_COLORS - 1
-  val COLORS = List(1, 2, 3, 4)
+  val NO_COLOR = -1 
 
   val colors: Array[Int] = Array.fill(graph.nodeCount)(NO_COLOR)
   val vertexForbiddenDomains: Array[List[Int]] = Array.fill(graph.nodeCount)(Nil)
@@ -28,9 +25,7 @@ class ConstraintEngine(val graph: Graph) {
     color1 == NO_COLOR || color2 == NO_COLOR || color1 != color2
   }
 
-  def checkDomain(vertex: Int): Boolean = vertexForbiddenDomains(vertex).size < MAX_COLORS
   def checkDomain(vertex: Int, color: Int): Boolean = !vertexForbiddenDomains(vertex).contains(color)
-  def checkDomains(): Boolean = (0 until graph.nodeCount).forall(checkDomain)
 
   def checkColor(vertex: Int): Boolean = color(vertex) == NO_COLOR
 
@@ -42,20 +37,8 @@ class ConstraintEngine(val graph: Graph) {
     val success = setColor.execute()
     new Result(success, List(setColor))
   }
-
-  def giveNextChoices(): List[Choice] = {
-    val start = colors.forall(_ == NO_COLOR)
-    val result = if (start) {
-      // give highest degree node with one color
-      val maximalDeg = graph.deg.head
-      List(Choice(maximalDeg._2, 0))
-    } else {
-      Nil
-    }
-    
-    result
-  }
-  def isSolved(): Boolean = false
+  
+  
 
 }
 
@@ -69,7 +52,7 @@ abstract class Instruction(val cp: ConstraintEngine) {
   val executed: ListBuffer[Instruction] = new ListBuffer[Instruction]()
 
   def execute(): Boolean = {
-    println("commit: " + this)
+    // println("commit: " + this)
     val feasible = doExecute()
 
     val con = feasible && consequences()
@@ -80,8 +63,8 @@ abstract class Instruction(val cp: ConstraintEngine) {
   }
 
   def rollback(): Unit = {
-    println("rollback: " + this)
-    //rollback in reverse order
+    // println("rollback: " + this)
+    // rollback in reverse order
     executed.toList.reverse.foreach(i => i.rollback())
     doRollback()
   }
@@ -126,7 +109,7 @@ class ForbidVertexDomain(cp: ConstraintEngine, vertex: Int, color: Int) extends 
   override def doExecute(): Boolean = {
     if (cp.checkColor(vertex)) {
       cp.vertexForbiddenDomains(vertex) = color :: cp.vertexForbiddenDomains(vertex)
-      cp.checkDomain(vertex)
+      true
     } else false
   }
 
@@ -134,23 +117,8 @@ class ForbidVertexDomain(cp: ConstraintEngine, vertex: Int, color: Int) extends 
     cp.vertexForbiddenDomains(vertex) = cp.vertexForbiddenDomains(vertex).tail
   }
 
-  override def consequences(): Boolean = {
-    val vertexColor = cp.color(vertex)
-    val domains = cp.vertexForbiddenDomains(vertex)
-
-    if (vertexColor == cp.NO_COLOR) {
-      domains.size match {
-        case i if i < cp.LIMIT_COLOR => true
-        case cp.LIMIT_COLOR =>
-          val onlyAllowed = cp.COLORS.diff(domains).head
-          val setColor = new SetVertexColor(cp, vertex, onlyAllowed)
-          executed.append(setColor)
-          setColor.execute()
-        case _ => false
-      }
-    } else { true }
-  }
-
+  override def consequences(): Boolean = true
+  
   override def toString = s"$vertex forbid $color domain ${cp.vertexForbiddenDomains(vertex).mkString("(", ",", ")")}"
 
 }
