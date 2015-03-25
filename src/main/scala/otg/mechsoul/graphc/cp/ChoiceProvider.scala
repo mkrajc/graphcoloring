@@ -19,7 +19,12 @@ abstract class ChoiceProvider(val cp: ConstraintEngine) {
 
   def success(ch: Choice): Choice = {
     currentChoices += ch
-    new Choice(nextVertex(ch.vertex), 0)
+    if (currentChoices.length < cp.graph.nodeCount) {
+      val next = nextVertex(ch.vertex)
+      new Choice(next, nextAvailableColor(next, 0))
+    } else {
+      null
+    }
   }
 
   def failure(ch: Choice): Choice = {
@@ -46,13 +51,10 @@ class GreedySmartChoicer(cp: ConstraintEngine) extends ChoiceProvider(cp) {
   private var currentIndex = 0
 
   def firstVertex = cp.graph.deg(currentIndex)._2
+  
   def nextVertex(v: Int): Int = {
-    if (currentIndex + 1 >= cp.graph.nodeCount) {
-      -1
-    } else {
-      currentIndex = currentIndex + 1
-      cp.graph.deg(currentIndex)._2
-    }
+    currentIndex = currentIndex + 1
+    cp.graph.deg(currentIndex)._2
   }
 }
 
