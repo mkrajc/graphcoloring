@@ -5,12 +5,21 @@ import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Queue
 
 abstract class ChoiceProvider(val cp: ConstraintEngine) {
-  val currentChoices: ListBuffer[Choice] = new ListBuffer[Choice]()
+  private var results: List[Result] = Nil
+
+  def popLastResult: Result = {
+    val head = results.head
+    results = results.tail
+    head
+  }
+
+  def resultsSize(): Int = results.length
 
   def next(ch: Choice): Choice = {
     val result = cp.applyChoice(ch)
 
     if (result.success) {
+      results = result :: results
       success(ch)
     } else {
       failure(ch)
@@ -18,17 +27,16 @@ abstract class ChoiceProvider(val cp: ConstraintEngine) {
   }
 
   def success(ch: Choice): Choice = {
-    currentChoices += ch
-    if (currentChoices.length < cp.graph.nodeCount) {
+    if (results.length < cp.graph.nodeCount) {
       val next = nextVertex(ch.vertex)
       new Choice(next, nextAvailableColor(next, 0))
     } else {
-      null
+      ch
     }
   }
 
   def failure(ch: Choice): Choice = {
-    new Choice(ch.vertex, nextAvailableColor(ch.vertex, 0))
+    new Choice(ch.vertex, nextAvailableColor(ch.vertex, ch.color + 1))
   }
 
   def firstVertex: Int
@@ -48,12 +56,11 @@ abstract class ChoiceProvider(val cp: ConstraintEngine) {
 }
 
 class GreedySmartChoicer(cp: ConstraintEngine) extends ChoiceProvider(cp) {
-  private var currentIndex = 0
 
-  def firstVertex = cp.graph.deg(currentIndex)._2
-  
+  def firstVertex = cp.graph.deg(0)._2
+
   def nextVertex(v: Int): Int = {
-    currentIndex = currentIndex + 1
+    var currentIndex = cp.graph.deg.indexWhere(p => p._2 == v) + 1
     cp.graph.deg(currentIndex)._2
   }
 }

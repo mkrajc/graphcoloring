@@ -9,8 +9,16 @@ class ConstraintEngine(val graph: Graph) {
   val NO_COLOR = -1 
 
   val colors: Array[Int] = Array.fill(graph.nodeCount)(NO_COLOR)
-  val vertexForbiddenDomains: Array[List[Int]] = Array.fill(graph.nodeCount)(Nil)
+  val vertexForbiddenDomains: Array[Set[Int]] = Array.fill(graph.nodeCount)(Set())
 
+  def checkFeasibility(): Boolean = {
+    graph.edges.forall(edge => {
+      val c1 = color(edge.from)
+      val c2 = color(edge.to)
+      c1 != NO_COLOR && c2 != NO_COLOR && checkColors(c1,c2)
+    })
+  }
+  
   def checkEdges(): Boolean = {
     graph.edges.forall(edge => {
       checkColors(color(edge.from), color(edge.to))
@@ -31,21 +39,25 @@ class ConstraintEngine(val graph: Graph) {
 
   def color(vertex: Int): Int = colors(vertex)
   def setColor(vertex: Int, color: Int) = colors(vertex) = color
+  
+  def colorsCount = colors.filterNot(_ == NO_COLOR).distinct.length
 
   def applyChoice(choice: Choice): Result = {
     val setColor = new SetVertexColor(this, choice.vertex, choice.color)
     val success = setColor.execute()
-    new Result(success, List(setColor))
+    new Result(success, List(setColor), choice)
   }
   
   
 
 }
 
-class Result(val success: Boolean, instructions: List[Instruction]) {
+class Result(val success: Boolean, instructions: List[Instruction], val choice: Choice) {
   def rollback() {
     instructions.foreach { i => i.rollback() }
   }
+  
+  override def toString = s"result $success, $choice"
 }
 
 abstract class Instruction(val cp: ConstraintEngine) {
@@ -63,7 +75,7 @@ abstract class Instruction(val cp: ConstraintEngine) {
   }
 
   def rollback(): Unit = {
-    // println("rollback: " + this)
+     // println("rollback: " + this)
     // rollback in reverse order
     executed.toList.reverse.foreach(i => i.rollback())
     doRollback()
@@ -83,7 +95,7 @@ class SetVertexColor(cp: ConstraintEngine, vertex: Int, color: Int) extends Inst
   override def doExecute(): Boolean = {
     if (cp.checkColor(vertex) && cp.checkDomain(vertex, color)) {
       cp.setColor(vertex, color);
-      cp.vertexForbiddenDomains(vertex) = Nil
+      cp.vertexForbiddenDomains(vertex) = Set()
       cp.checkEdges(vertex);
     } else false
   }
@@ -108,13 +120,13 @@ class ForbidVertexDomain(cp: ConstraintEngine, vertex: Int, color: Int) extends 
 
   override def doExecute(): Boolean = {
     if (cp.checkColor(vertex)) {
-      cp.vertexForbiddenDomains(vertex) = color :: cp.vertexForbiddenDomains(vertex)
+      cp.vertexForbiddenDomains(vertex) = cp.vertexForbiddenDomains(vertex) + color
       true
     } else false
   }
 
   override def doRollback(): Unit = {
-    cp.vertexForbiddenDomains(vertex) = cp.vertexForbiddenDomains(vertex).tail
+    cp.vertexForbiddenDomains(vertex) = cp.vertexForbiddenDomains(vertex) - color
   }
 
   override def consequences(): Boolean = true
